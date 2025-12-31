@@ -83,10 +83,12 @@ def press_push_buttons(page: Page, button_id: str = "btn1", hold_ms: int = 300, 
             if led_state == "ON":
                 assert led_state in text
                 print("VERIFIED LED STATE CHANGES FROM OFF ==> ON Successfully")
+                page.screenshot(path="led_on.png")
                 break
             elif led_state == "OFF":
                 assert led_state in text
                 print("VERIFIED LED STATE CHANGE FROM ON ==> OFF Successfully")
+                page.screenshot(path='led_off.png')
                 break
             else:
                 print("Looping LED ON=>OFF=>ON and vice verse")
@@ -103,6 +105,33 @@ def press_push_buttons(page: Page, button_id: str = "btn1", hold_ms: int = 300, 
 def read_monitor(page: Page):
     ".notranslate"
     print("reading cosole")
+    time.sleep(10)
     text = page.locator(".notranslate").inner_text()
     print(text)
     return text
+
+
+def click_on_sensor(page: Page, button_id='#id', hold_ms: int = 300,):
+    # dht1
+    dht = page.locator("#dht1")
+    dht.wait_for(state="visible", timeout=10000)
+    dht.click(force=True)
+
+    # # Get real screen coordinates
+    # box = button.bounding_box()
+    # if not box:
+    #     raise Exception("Unable to determine button position")
+    #
+    # x = box["x"] + box["width"] / 2
+    # y = box["y"] + box["height"] / 2
+    #
+    # # IMPORTANT: pointer down + delay + pointer up
+    #
+    # page.mouse.move(x, y)
+    # page.mouse.down()
+    # page.wait_for_timeout(hold_ms)
+    # page.mouse.up()
+    #
+    # print(f"Push button '{button_id}' pressed for {hold_ms} ms")
+    text = read_monitor(page)
+    time.sleep(30)
