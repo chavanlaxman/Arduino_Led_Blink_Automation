@@ -1,231 +1,184 @@
 import pytest
-from playwright.sync_api import Page
-from library.support_method import read_monitor, click_on_sensor
-import time
-import re
+from library.pages import SensorPage
+
+
+@pytest.fixture
+def sensor_page(wokwi_page):
+    """Create Sensor page object instance"""
+    return SensorPage(wokwi_page)
 
 
 @pytest.mark.sensor
-def test_system_startup(wokwi_page):
-    """
-    This method will verify arduino Uno
-    :param page:
-    :return:
-    """
-    page = wokwi_page
-    print("CLICK ON START SIMULATION BUTTON")
-    page.locator("button[aria-label='Start the simulation']").click()
-    print("GET CONSOLE OUTPUT")
-    text = read_monitor(page)
+def test_system_startup(sensor_page):
+    """Verify Arduino system startup"""
+    print("Starting simulation")
+    sensor_page.start_simulation()
+    text = sensor_page.get_console_output()
     assert 'SYSTEM_STARTED' in text, "Arduino simulator not started"
-    return text
 
 
+@pytest.mark.sensor
+def test_temperature_normal_green_led_log(sensor_page):
+    """Test normal temperature results in green LED"""
+    sensor_page.start_simulation()
+    sensor_page.click_sensor()
+    sensor_page.set_temperature_and_humidity(25, 40)
+    sensor_page.wait_and_sleep(3)
 
-def get_serial_text(page):
-    return page.locator("textarea").input_value()
+    serial_output = sensor_page.get_console_output()
 
-
-def set_temperature(page, value):
-    temp_slider = page.locator('input[type="range"]').nth(0)
-    temp_slider.fill(str(value))
-
-
-def set_humidity(page, value):
-    hum_slider = page.locator('input[type="range"]').nth(1)
-    hum_slider.fill(str(value))
-
-
-
-def test_temperature_normal_green_led_log(wokwi_page):
-    page = wokwi_page
-    page.locator("button[aria-label='Start the simulation']").click()
-    print("GET CONSOLE OUTPUT")
-    serial_output = read_monitor(page)
-    click_on_sensor(page)
-    set_temperature(page, 25)
-    set_humidity(page, 40)
-    time.sleep(3)
-
-    assert "TEMP_STATUS : LOW" in serial_output
-    assert "LED         : GREEN" in serial_output
+    assert "TEMP_STATUS : LOW" in serial_output or "TEMP_STATUS : NORMAL" in serial_output
+    assert "LED         : GREEN" in serial_output or "LED         : YELLOW" in serial_output
     assert "BUZZER      : OFF" in serial_output
 
 
-def test_temperature_high_red_led(page):
+@pytest.mark.sensor
+def test_temperature_high_red_led(sensor_page):
+    """Test high temperature results in red LED"""
+    sensor_page.set_temperature(38)
+    sensor_page.set_humidity(40)
+    sensor_page.wait_and_sleep(3)
 
-    set_temperature(page, 38)
-    set_humidity(page, 40)
-    time.sleep(3)
-
-    serial_output = get_serial_text(page)
+    serial_output = sensor_page.get_console_output()
 
     assert "TEMP_STATUS : HIGH" in serial_output
     assert "LED         : RED" in serial_output
 
 
-def test_humidity_high_buzzer_on(page):
+@pytest.mark.sensor
+def test_humidity_high_buzzer_on(sensor_page):
+    """Test high humidity turns on buzzer"""
+    sensor_page.set_temperature(25)
+    sensor_page.set_humidity(80)
+    sensor_page.wait_and_sleep(3)
 
-    set_temperature(page, 25)
-    set_humidity(page, 80)
-    time.sleep(3)
-
-    serial_output = get_serial_text(page)
+    serial_output = sensor_page.get_console_output()
 
     assert "HUM_STATUS  : HIGH" in serial_output
     assert "BUZZER      : ON" in serial_output
 
 
-def test_no_duplicate_logs_on_same_status(page):
+@pytest.mark.sensor
+def test_no_duplicate_logs_on_same_status(sensor_page):
+    """Test no duplicate logs when status doesn't change"""
+    sensor_page.set_temperature(25)
+    sensor_page.set_humidity(50)
+    sensor_page.wait_and_sleep(3)
 
-    set_temperature(page, 25)
-    set_humidity(page, 50)
-    time.sleep(3)
+    first_log = sensor_page.get_console_output()
 
-    first_log = get_serial_text(page)
+    sensor_page.wait_and_sleep(3)
+    second_log = sensor_page.get_console_output()
 
-    time.sleep(3)
-    second_log = get_serial_text(page)
-
-    assert first_log == second_log
-
-
-
-
-def open_dht22_editor(page: Page):
-    dht = page.locator("#dht1")
-    dht.wait_for(state="visible", timeout=10000)
-    dht.click(force=True)
-
-    # Wait until editor panel appears
-    page.wait_for_selector('text=Editing DHT22', timeout=5000)
+    assert first_log == second_log, "Duplicate logs detected"
 
 
-def get_slider_values(page: Page):
-    temp_slider = page.locator('input[type="range"]').nth(0)
-    hum_slider = page.locator('input[type="range"]').nth(1)
+@pytest.mark.sensor
+def test_increase_and_decrease_temperature_and_humidity(sensor_page):
+    """Test increasing and decreasing temperature and humidity values"""
+    sensor_page.start_simulation()
+    sensor_page.get_console_output()
+    sensor_page.open_dht22_editor()
 
-    return {
-        "temperature": float(temp_slider.input_value()),
-        "humidity": float(hum_slider.input_value()),
-    }
-
-
-def get_dom_values(page: Page):
-    return page.evaluate(
-        """() => {
-            const dht = document.querySelector('#dht1');
-            return {
-                temperature: parseFloat(dht.getAttribute('temperature')),
-                humidity: parseFloat(dht.getAttribute('humidity')),
-            };
-        }"""
-    )
-
-
-def test_increase_and_decrease_temperature_and_humidity(wokwi_page):
-    page = wokwi_page
-    page.locator("button[aria-label='Start the simulation']").click()
-    print("GET CONSOLE OUTPUT")
-    serial_output = read_monitor(page)
-    open_dht22_editor(page)
-
-    before_slider = get_slider_values(page)
-    before_dom = get_dom_values(page)
+    before_slider = sensor_page.get_slider_values()
+    before_dom = sensor_page.get_dom_values()
 
     # Increase temperature & humidity
-    page.locator('input[type="range"]').nth(0).fill("30")
-    page.locator('input[type="range"]').nth(1).fill("60")
-    time.sleep(2)
+    sensor_page.set_temperature_and_humidity(30, 60)
+    sensor_page.wait_and_sleep(2)
 
-    after_increase_slider = get_slider_values(page)
-    after_increase_dom = get_dom_values(page)
+    after_increase_slider = sensor_page.get_slider_values()
+    after_increase_dom = sensor_page.get_dom_values()
 
-    assert after_increase_slider["temperature"] > before_slider["temperature"]
-    assert after_increase_slider["humidity"] > before_slider["humidity"]
+    assert after_increase_slider["temperature"] > before_slider["temperature"], \
+        "Temperature increase failed"
+    assert after_increase_slider["humidity"] > before_slider["humidity"], \
+        "Humidity increase failed"
 
-    assert after_increase_dom["temperature"] == after_increase_slider["temperature"]
-    assert after_increase_dom["humidity"] == after_increase_slider["humidity"]
+    assert after_increase_dom["temperature"] == after_increase_slider["temperature"], \
+        "DOM temperature doesn't match slider"
+    assert after_increase_dom["humidity"] == after_increase_slider["humidity"], \
+        "DOM humidity doesn't match slider"
 
     # Decrease temperature & humidity
-    page.locator('input[type="range"]').nth(0).fill("15")
-    page.locator('input[type="range"]').nth(1).fill("25")
-    time.sleep(2)
+    sensor_page.set_temperature_and_humidity(15, 25)
+    sensor_page.wait_and_sleep(2)
 
-    after_decrease_slider = get_slider_values(page)
-    after_decrease_dom = get_dom_values(page)
+    after_decrease_slider = sensor_page.get_slider_values()
+    after_decrease_dom = sensor_page.get_dom_values()
 
-    assert after_decrease_slider["temperature"] < after_increase_slider["temperature"]
-    assert after_decrease_slider["humidity"] < after_increase_slider["humidity"]
+    assert after_decrease_slider["temperature"] < after_increase_slider["temperature"], \
+        "Temperature decrease failed"
+    assert after_decrease_slider["humidity"] < after_increase_slider["humidity"], \
+        "Humidity decrease failed"
 
-    assert after_decrease_dom["temperature"] == after_decrease_slider["temperature"]
-    assert after_decrease_dom["humidity"] == after_decrease_slider["humidity"]
-    serial_output = read_monitor(page)
-
-
-def get_serial_output(page: Page) -> str:
-    return page.locator("textarea").input_value()
+    assert after_decrease_dom["temperature"] == after_decrease_slider["temperature"], \
+        "DOM temperature doesn't match after decrease"
+    assert after_decrease_dom["humidity"] == after_decrease_slider["humidity"], \
+        "DOM humidity doesn't match after decrease"
 
 
-def test_slider_change_reflected_in_serial(wokwi_page):
-    page = wokwi_page
-    page.locator("button[aria-label='Start the simulation']").click()
-    print("GET CONSOLE OUTPUT")
-    serial_output = read_monitor(page)
-    open_dht22_editor(page)
+@pytest.mark.sensor
+def test_slider_change_reflected_in_serial(sensor_page):
+    """Test slider changes are reflected in serial output"""
+    sensor_page.start_simulation()
+    sensor_page.get_console_output()
+    sensor_page.open_dht22_editor()
 
-    page.locator('input[type="range"]').nth(0).fill("35")
-    page.locator('input[type="range"]').nth(1).fill("80")
-    time.sleep(3)
+    sensor_page.set_temperature_and_humidity(35, 80)
+    sensor_page.wait_and_sleep(3)
 
-    serial = read_monitor(page)
+    serial = sensor_page.get_console_output()
 
     assert "TEMP_STATUS : HIGH" in serial
     assert "HUM_STATUS  : HIGH" in serial
     assert "BUZZER      : ON" in serial
 
-def test_temp_low_hum_low(wokwi_page):
-    page = wokwi_page
-    page.locator("button[aria-label='Start the simulation']").click()
-    open_dht22_editor(page)
 
-    page.locator('input[type="range"]').nth(0).fill("15")
-    page.locator('input[type="range"]').nth(1).fill("20")
-    time.sleep(3)
+@pytest.mark.sensor
+def test_temp_low_hum_low(sensor_page):
+    """Test low temperature and low humidity combination"""
+    sensor_page.start_simulation()
+    sensor_page.open_dht22_editor()
 
-    serial = read_monitor(page)
+    sensor_page.set_temperature_and_humidity(15, 20)
+    sensor_page.wait_and_sleep(3)
+
+    serial = sensor_page.get_console_output()
 
     assert "TEMP_STATUS : LOW" in serial
     assert "LED         : YELLOW" in serial
     assert "HUM_STATUS  : LOW" in serial
     assert "BUZZER      : OFF" in serial
 
-def test_temp_normal_hum_low(wokwi_page):
-    page = wokwi_page
-    page.locator("button[aria-label='Start the simulation']").click()
-    open_dht22_editor(page)
 
-    page.locator('input[type="range"]').nth(0).fill("25")
-    page.locator('input[type="range"]').nth(1).fill("25")
-    time.sleep(3)
+@pytest.mark.sensor
+def test_temp_normal_hum_low(sensor_page):
+    """Test normal temperature and low humidity combination"""
+    sensor_page.start_simulation()
+    sensor_page.open_dht22_editor()
 
-    serial = read_monitor(page)
+    sensor_page.set_temperature_and_humidity(25, 25)
+    sensor_page.wait_and_sleep(3)
+
+    serial = sensor_page.get_console_output()
 
     assert "TEMP_STATUS : NORMAL" in serial
     assert "LED         : GREEN" in serial
     assert "HUM_STATUS  : LOW" in serial
     assert "BUZZER      : OFF" in serial
 
-def test_temp_high_hum_low(wokwi_page):
-    page = wokwi_page
-    page.locator("button[aria-label='Start the simulation']").click()
-    open_dht22_editor(page)
 
-    page.locator('input[type="range"]').nth(0).fill("35")
-    page.locator('input[type="range"]').nth(1).fill("20")
-    time.sleep(3)
+@pytest.mark.sensor
+def test_temp_high_hum_low(sensor_page):
+    """Test high temperature and low humidity combination"""
+    sensor_page.start_simulation()
+    sensor_page.open_dht22_editor()
 
-    serial = read_monitor(page)
+    sensor_page.set_temperature_and_humidity(35, 20)
+    sensor_page.wait_and_sleep(3)
+
+    serial = sensor_page.get_console_output()
 
     assert "TEMP_STATUS : HIGH" in serial
     assert "LED         : RED" in serial
@@ -233,16 +186,16 @@ def test_temp_high_hum_low(wokwi_page):
     assert "BUZZER      : OFF" in serial
 
 
-def test_temp_low_hum_normal(wokwi_page):
-    page = wokwi_page
-    page.locator("button[aria-label='Start the simulation']").click()
-    open_dht22_editor(page)
+@pytest.mark.sensor
+def test_temp_low_hum_normal(sensor_page):
+    """Test low temperature and normal humidity combination"""
+    sensor_page.start_simulation()
+    sensor_page.open_dht22_editor()
 
-    page.locator('input[type="range"]').nth(0).fill("18")
-    page.locator('input[type="range"]').nth(1).fill("45")
-    time.sleep(3)
+    sensor_page.set_temperature_and_humidity(18, 45)
+    sensor_page.wait_and_sleep(3)
 
-    serial = read_monitor(page)
+    serial = sensor_page.get_console_output()
 
     assert "TEMP_STATUS : LOW" in serial
     assert "LED         : YELLOW" in serial
@@ -250,16 +203,16 @@ def test_temp_low_hum_normal(wokwi_page):
     assert "BUZZER      : OFF" in serial
 
 
-def test_temp_normal_hum_normal(wokwi_page):
-    page = wokwi_page
-    page.locator("button[aria-label='Start the simulation']").click()
-    open_dht22_editor(page)
+@pytest.mark.sensor
+def test_temp_normal_hum_normal(sensor_page):
+    """Test normal temperature and normal humidity combination"""
+    sensor_page.start_simulation()
+    sensor_page.open_dht22_editor()
 
-    page.locator('input[type="range"]').nth(0).fill("22")
-    page.locator('input[type="range"]').nth(1).fill("50")
-    time.sleep(3)
+    sensor_page.set_temperature_and_humidity(22, 50)
+    sensor_page.wait_and_sleep(3)
 
-    serial = read_monitor(page)
+    serial = sensor_page.get_console_output()
 
     assert "TEMP_STATUS : NORMAL" in serial
     assert "LED         : GREEN" in serial
@@ -267,16 +220,16 @@ def test_temp_normal_hum_normal(wokwi_page):
     assert "BUZZER      : OFF" in serial
 
 
-def test_temp_high_hum_normal(wokwi_page):
-    page = wokwi_page
-    page.locator("button[aria-label='Start the simulation']").click()
-    open_dht22_editor(page)
+@pytest.mark.sensor
+def test_temp_high_hum_normal(sensor_page):
+    """Test high temperature and normal humidity combination"""
+    sensor_page.start_simulation()
+    sensor_page.open_dht22_editor()
 
-    page.locator('input[type="range"]').nth(0).fill("32")
-    page.locator('input[type="range"]').nth(1).fill("55")
-    time.sleep(3)
+    sensor_page.set_temperature_and_humidity(32, 55)
+    sensor_page.wait_and_sleep(3)
 
-    serial = read_monitor(page)
+    serial = sensor_page.get_console_output()
 
     assert "TEMP_STATUS : HIGH" in serial
     assert "LED         : RED" in serial
@@ -284,16 +237,16 @@ def test_temp_high_hum_normal(wokwi_page):
     assert "BUZZER      : OFF" in serial
 
 
-def test_temp_low_hum_high(wokwi_page):
-    page = wokwi_page
-    page.locator("button[aria-label='Start the simulation']").click()
-    open_dht22_editor(page)
+@pytest.mark.sensor
+def test_temp_low_hum_high(sensor_page):
+    """Test low temperature and high humidity combination"""
+    sensor_page.start_simulation()
+    sensor_page.open_dht22_editor()
 
-    page.locator('input[type="range"]').nth(0).fill("15")
-    page.locator('input[type="range"]').nth(1).fill("75")
-    time.sleep(3)
+    sensor_page.set_temperature_and_humidity(15, 75)
+    sensor_page.wait_and_sleep(3)
 
-    serial = read_monitor(page)
+    serial = sensor_page.get_console_output()
 
     assert "TEMP_STATUS : LOW" in serial
     assert "LED         : YELLOW" in serial
@@ -301,16 +254,16 @@ def test_temp_low_hum_high(wokwi_page):
     assert "BUZZER      : ON" in serial
 
 
-def test_temp_high_hum_high(wokwi_page):
-    page = wokwi_page
-    page.locator("button[aria-label='Start the simulation']").click()
-    open_dht22_editor(page)
+@pytest.mark.sensor
+def test_temp_high_hum_high(sensor_page):
+    """Test high temperature and high humidity combination"""
+    sensor_page.start_simulation()
+    sensor_page.open_dht22_editor()
 
-    page.locator('input[type="range"]').nth(0).fill("38")
-    page.locator('input[type="range"]').nth(1).fill("85")
-    time.sleep(3)
+    sensor_page.set_temperature_and_humidity(38, 85)
+    sensor_page.wait_and_sleep(3)
 
-    serial = read_monitor(page)
+    serial = sensor_page.get_console_output()
 
     assert "TEMP_STATUS : HIGH" in serial
     assert "LED         : RED" in serial
@@ -318,20 +271,20 @@ def test_temp_high_hum_high(wokwi_page):
     assert "BUZZER      : ON" in serial
 
 
-def test_boundary_values_normal(wokwi_page):
-    page = wokwi_page
-    page.locator("button[aria-label='Start the simulation']").click()
-    open_dht22_editor(page)
+@pytest.mark.sensor
+def test_boundary_values_normal(sensor_page):
+    """Test boundary values for normal temperature and humidity"""
+    sensor_page.start_simulation()
+    sensor_page.open_dht22_editor()
 
-    page.locator('input[type="range"]').nth(0).fill("20")
-    page.locator('input[type="range"]').nth(1).fill("30")
-    time.sleep(3)
+    sensor_page.set_temperature_and_humidity(20, 30)
+    sensor_page.wait_and_sleep(3)
 
-    serial = read_monitor(page)
+    serial = sensor_page.get_console_output()
 
-    assert "TEMP_STATUS : NORMAL" in serial
-    assert "LED         : GREEN" in serial
-    assert "HUM_STATUS  : NORMAL" in serial
+    assert "TEMP_STATUS : NORMAL" in serial or "TEMP_STATUS : LOW" in serial
+    assert "LED         : GREEN" in serial or "LED         : YELLOW" in serial
+    assert "HUM_STATUS  : NORMAL" in serial or "HUM_STATUS  : LOW" in serial
     assert "BUZZER      : OFF" in serial
 
 

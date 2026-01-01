@@ -1,59 +1,52 @@
 import pytest
 import time
-from playwright.sync_api import Page, expect
-from library.support_method import open_project, press_push_buttons
+from library.pages import LEDBlinKPage
 
 
-
-@pytest.mark.led
-def test_is_simulation_button_present(wokwi_page):
-    """
-    This methid will verify is simulation button present
-    :param wokwi_page:
-    :return:
-    """
-    page=wokwi_page
-    simulation_started=False
-    if page.locator("button[aria-label='Start the simulation']").is_visible():
-        simulation_started=True
-        return simulation_started
-    else:
-        print("Simulation Green Button not found")
-        return simulation_started
+@pytest.fixture
+def led_page(wokwi_page):
+    """Create LED page object instance"""
+    return LEDBlinKPage(wokwi_page)
 
 
 @pytest.mark.led
-def test_simulation_led_blink_off_to_on(wokwi_page):
-    page=wokwi_page
-    print("FIT THE SCREEN FOR MOUSE CLICK ACTION TO PERFORM ON X,Y CO-ORDINATE")
-    page.keyboard.press("Shift+KeyF")
-    print("CLICK ON START SIMULATION BUTTON")
-    page.locator("button[aria-label='Start the simulation']").click()
-    print("SIMULATION STARTED")
-    press_push_buttons(page, "btn1", hold_ms=500, led_state="ON")
-    time.sleep(30)
+def test_system_startup(led_page):
+    """Verify Arduino system startup"""
+    print("Starting simulation")
+    led_page.start_simulation()
+    text = led_page.get_console_output()
+    assert 'SYSTEM_STARTED' in text, "Arduino simulator not started"
 
 
 @pytest.mark.led
-def test_simulation_led_blink_on_to_off(wokwi_page):
-    page=wokwi_page
-    print("FIT THE SCREEN FOR MOUSE CLICK ACTION TO PERFORM ON X,Y CO-ORDINATE")
-    page.keyboard.press("Shift+KeyF")
-    print("CLICK ON START SIMULATION BUTTON")
-    page.locator("button[aria-label='Start the simulation']").click()
-    print("SIMULATION STARTED")
-    press_push_buttons(page, "btn1", hold_ms=500, led_state="OFF")
-    time.sleep(30)
+def test_is_simulation_button_present(led_page):
+    """Verify if simulation button is present and visible"""
+    assert led_page.is_simulation_started(), "Simulation button not found"
 
 
 @pytest.mark.led
-def test_simulation_led_blink_loop(wokwi_page):
-    page=wokwi_page
-    print("FIT THE SCREEN FOR MOUSE CLICK ACTION TO PERFORM ON X,Y CO-ORDINATE")
-    page.keyboard.press("Shift+KeyF")
-    print("CLICK ON START SIMULATION BUTTON")
-    page.locator("button[aria-label='Start the simulation']").click()
-    print("SIMULATION STARTED")
-    press_push_buttons(page, "btn1", hold_ms=500)
-    time.sleep(30)
+def test_simulation_led_blink_off_to_on(led_page):
+    """Test LED blink transition from OFF to ON"""
+    led_page.fit_screen()
+    led_page.start_simulation()
+    assert led_page.press_push_button("btn1", hold_ms=500, led_state="ON"), \
+        "LED did not transition to ON state"
+
+
+@pytest.mark.led
+def test_simulation_led_blink_on_to_off(led_page):
+    """Test LED blink transition from ON to OFF"""
+    led_page.fit_screen()
+    led_page.start_simulation()
+    assert led_page.press_push_button("btn1", hold_ms=500, led_state="OFF"), \
+        "LED did not transition to OFF state"
+
+
+@pytest.mark.led
+def test_simulation_led_blink_loop(led_page):
+    """Test LED blink loop behavior"""
+    led_page.fit_screen()
+    led_page.start_simulation()
+    assert led_page.press_push_button("btn1", hold_ms=500), \
+        "LED blink loop test failed"
 
