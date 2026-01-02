@@ -16,7 +16,6 @@ def stop_simulation(page: Page):
         return simulation_started
     else:
         print("Simulation stop Button not found")
-        page.screenshot("stop_simulation_button_not_found.png")
         return simulation_stoped
 
 

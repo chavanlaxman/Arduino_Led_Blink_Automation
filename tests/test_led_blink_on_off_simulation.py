@@ -15,7 +15,7 @@ def test_system_startup(led_page):
     print("Starting simulation")
     led_page.start_simulation()
     text = led_page.get_console_output()
-    assert 'SYSTEM_STARTED' in text, "Arduino simulator not started"
+    assert 'System Started' in text, "Arduino simulator not started"
 
 
 @pytest.mark.led

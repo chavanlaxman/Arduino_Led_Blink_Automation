@@ -7,7 +7,7 @@ def sensor_page(wokwi_page):
     """Create Sensor page object instance"""
     return SensorPage(wokwi_page)
 
-
+@pytest.mark.test
 @pytest.mark.sensor
 def test_system_startup(sensor_page):
     """Verify Arduino system startup"""
@@ -18,6 +18,7 @@ def test_system_startup(sensor_page):
 
 
 @pytest.mark.sensor
+@pytest.mark.test
 def test_temperature_normal_green_led_log(sensor_page):
     """Test normal temperature results in green LED"""
     sensor_page.start_simulation()

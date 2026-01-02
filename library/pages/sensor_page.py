@@ -5,6 +5,8 @@ Contains all locators and methods related to sensor simulation
 from library.pages.base_page import BasePage
 import time
 
+from library.support_method import stop_simulation
+
 
 class SensorPage(BasePage):
     """Page object for Temperature & Humidity Sensor simulation"""
@@ -20,13 +22,21 @@ class SensorPage(BasePage):
 
     def start_simulation(self):
         """Start the simulation"""
-        print("Starting simulation")
-        self.click_element(self.START_SIMULATION_BUTTON)
-        self.wait_and_sleep(2)
+        for attemts in range(5):
+            try:
+                print(f"Starting simulation {attemts}")
+                self.click_element(self.START_SIMULATION_BUTTON)
+                self.wait_and_sleep(2)
+                assert stop_simulation(self.page), "simulation  click action failed "
+                break
+            except Exception as e:
+                print(f"Exception occured during click action{e}")
+                print(f"retrying click action attemts {attemts}")
 
     def get_console_output(self) -> str:
         """Get console/serial monitor output"""
-        print("Reading console output")
+        text=""
+        print("Reading Serial Monitor Screen Text")
         self.wait_and_sleep(10)
         text = self.get_text_from_locator(self.CONSOLE_OUTPUT)
         print(text)
@@ -112,3 +122,8 @@ class SensorPage(BasePage):
     def take_sensor_screenshot(self, filename: str = "sensor_screenshot.png"):
         """Take screenshot of current sensor state"""
         self.take_screenshot(filename)
+
+    def wait_until_pop_up_go(self):
+        loader = self.page.locator("p:has-text('Compiling project...')")
+        loader.wait_for(state="visible", timeout=30000)
+        loader.wait_for(state="hidden", timeout=30000)
