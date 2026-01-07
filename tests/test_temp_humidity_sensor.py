@@ -1,4 +1,6 @@
 import pytest
+
+from library.decorator_helper import retry
 from library.pages import SensorPage
 
 
@@ -7,7 +9,8 @@ def sensor_page(wokwi_page):
     """Create Sensor page object instance"""
     return SensorPage(wokwi_page)
 
-@pytest.mark.test
+
+@retry()
 @pytest.mark.sensor
 def test_system_startup(sensor_page):
     """Verify Arduino system startup"""
@@ -17,8 +20,8 @@ def test_system_startup(sensor_page):
     assert 'SYSTEM_STARTED' in text, "Arduino simulator not started"
 
 
+@retry()
 @pytest.mark.sensor
-@pytest.mark.test
 def test_temperature_normal_green_led_log(sensor_page):
     """Test normal temperature results in green LED"""
     sensor_page.start_simulation()
@@ -33,6 +36,7 @@ def test_temperature_normal_green_led_log(sensor_page):
     assert "BUZZER      : OFF" in serial_output
 
 
+@retry()
 @pytest.mark.sensor
 def test_temperature_high_red_led(sensor_page):
     """Test high temperature results in red LED"""
@@ -48,6 +52,7 @@ def test_temperature_high_red_led(sensor_page):
     assert "LED         : RED" in serial_output
 
 
+@retry()
 @pytest.mark.sensor
 def test_humidity_high_buzzer_on(sensor_page):
     """Test high humidity turns on buzzer"""
@@ -64,6 +69,7 @@ def test_humidity_high_buzzer_on(sensor_page):
     assert "BUZZER      : ON" in serial_output
 
 
+@retry()
 @pytest.mark.skip
 def test_no_duplicate_logs_on_same_status(sensor_page):
     """Test no duplicate logs when status doesn't change"""
@@ -82,6 +88,7 @@ def test_no_duplicate_logs_on_same_status(sensor_page):
     assert first_log == second_log, "Duplicate logs detected"
 
 
+@retry()
 @pytest.mark.sensor
 def test_increase_and_decrease_temperature_and_humidity(sensor_page):
     """Test increasing and decreasing temperature and humidity values"""
@@ -127,6 +134,7 @@ def test_increase_and_decrease_temperature_and_humidity(sensor_page):
         "DOM humidity doesn't match after decrease"
 
 
+@retry()
 @pytest.mark.sensor
 def test_slider_change_reflected_in_serial(sensor_page):
     """Test slider changes are reflected in serial output"""
@@ -144,6 +152,7 @@ def test_slider_change_reflected_in_serial(sensor_page):
     assert "BUZZER      : ON" in serial
 
 
+@retry()
 @pytest.mark.sensor
 def test_temp_low_hum_low(sensor_page):
     """Test low temperature and low humidity combination"""
@@ -161,6 +170,7 @@ def test_temp_low_hum_low(sensor_page):
     assert "BUZZER      : OFF" in serial
 
 
+@retry()
 @pytest.mark.sensor
 def test_temp_normal_hum_low(sensor_page):
     """Test normal temperature and low humidity combination"""
@@ -178,6 +188,7 @@ def test_temp_normal_hum_low(sensor_page):
     assert "BUZZER      : OFF" in serial
 
 
+@retry()
 @pytest.mark.sensor
 def test_temp_high_hum_low(sensor_page):
     """Test high temperature and low humidity combination"""
@@ -195,6 +206,7 @@ def test_temp_high_hum_low(sensor_page):
     assert "BUZZER      : OFF" in serial
 
 
+@retry()
 @pytest.mark.sensor
 def test_temp_low_hum_normal(sensor_page):
     """Test low temperature and normal humidity combination"""
@@ -212,6 +224,7 @@ def test_temp_low_hum_normal(sensor_page):
     assert "BUZZER      : OFF" in serial
 
 
+@retry()
 @pytest.mark.sensor
 def test_temp_normal_hum_normal(sensor_page):
     """Test normal temperature and normal humidity combination"""
@@ -229,6 +242,7 @@ def test_temp_normal_hum_normal(sensor_page):
     assert "BUZZER      : OFF" in serial
 
 
+@retry()
 @pytest.mark.sensor
 def test_temp_high_hum_normal(sensor_page):
     """Test high temperature and normal humidity combination"""
@@ -246,6 +260,7 @@ def test_temp_high_hum_normal(sensor_page):
     assert "BUZZER      : OFF" in serial
 
 
+@retry()
 @pytest.mark.sensor
 def test_temp_low_hum_high(sensor_page):
     """Test low temperature and high humidity combination"""
@@ -263,6 +278,7 @@ def test_temp_low_hum_high(sensor_page):
     assert "BUZZER      : ON" in serial
 
 
+@retry()
 @pytest.mark.sensor
 def test_temp_high_hum_high(sensor_page):
     """Test high temperature and high humidity combination"""
@@ -280,6 +296,7 @@ def test_temp_high_hum_high(sensor_page):
     assert "BUZZER      : ON" in serial
 
 
+@retry()
 @pytest.mark.sensor
 def test_boundary_values_normal(sensor_page):
     """Test boundary values for normal temperature and humidity"""

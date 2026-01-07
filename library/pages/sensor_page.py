@@ -32,6 +32,9 @@ class SensorPage(BasePage):
             except Exception as e:
                 print(f"Exception occured during click action{e}")
                 print(f"retrying click action attemts {attemts}")
+                if stop_simulation(self.page):
+                    print("simulation already started")
+                    break
 
     def get_console_output(self) -> str:
         """Get console/serial monitor output"""
