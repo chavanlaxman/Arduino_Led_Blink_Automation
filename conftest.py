@@ -1,6 +1,5 @@
 import pytest
 from playwright.sync_api import Page, Playwright
-
 from library.framewrok_url import TEMP_HUMI_SESNOR_URL, LED_BLINK_PROJECT_URL
 from library.support_method import open_project
 

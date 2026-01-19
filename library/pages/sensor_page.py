@@ -110,9 +110,9 @@ class SensorPage(BasePage):
         )
 
         if matches:
-            print("✓ Slider values match DOM values")
+            print("Slider values match DOM values")
         else:
-            print("✗ Slider values do not match DOM values")
+            print("Slider values do not match DOM values")
 
         return matches
 

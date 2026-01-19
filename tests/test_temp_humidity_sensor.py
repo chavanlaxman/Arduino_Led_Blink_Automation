@@ -45,6 +45,7 @@ def test_temperature_high_red_led(sensor_page):
     sensor_page.set_temperature(38)
     sensor_page.set_humidity(40)
     sensor_page.wait_and_sleep(3)
+    pass
 
     serial_output = sensor_page.get_console_output()
 

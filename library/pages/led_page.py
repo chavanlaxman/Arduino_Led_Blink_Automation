@@ -108,12 +108,12 @@ class LEDBlinKPage(BasePage):
             try:
                 if led_state == "ON":
                     assert "ON" in text
-                    print("✓ LED state changed to ON")
+                    print("LED state changed to ON")
                     self.take_screenshot("led_on.png")
                     return True
                 elif led_state == "OFF":
                     assert "OFF" in text
-                    print("✓ LED state changed to OFF")
+                    print("LED state changed to OFF")
                     self.take_screenshot("led_off.png")
                     return True
                 else:
