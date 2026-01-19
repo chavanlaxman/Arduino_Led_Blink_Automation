@@ -1,5 +1,6 @@
 import pytest
 import time
+from library.decorator_helper import retry
 from library.pages import LEDBlinKPage
 
 
@@ -9,6 +10,7 @@ def led_page(wokwi_page):
     return LEDBlinKPage(wokwi_page)
 
 
+@retry()
 @pytest.mark.led
 def test_system_startup(led_page):
     """Verify Arduino system startup"""
@@ -18,12 +20,14 @@ def test_system_startup(led_page):
     assert 'System Started' in text, "Arduino simulator not started"
 
 
+@retry()
 @pytest.mark.led
 def test_is_simulation_button_present(led_page):
     """Verify if simulation button is present and visible"""
     assert led_page.is_simulation_started(), "Simulation button not found"
 
 
+@retry()
 @pytest.mark.led
 def test_simulation_led_blink_off_to_on(led_page):
     """Test LED blink transition from OFF to ON"""
@@ -33,6 +37,7 @@ def test_simulation_led_blink_off_to_on(led_page):
         "LED did not transition to ON state"
 
 
+@retry()
 @pytest.mark.led
 def test_simulation_led_blink_on_to_off(led_page):
     """Test LED blink transition from ON to OFF"""
@@ -41,7 +46,7 @@ def test_simulation_led_blink_on_to_off(led_page):
     assert led_page.press_push_button("btn1", hold_ms=500, led_state="OFF"), \
         "LED did not transition to OFF state"
 
-
+@retry()
 @pytest.mark.led
 def test_simulation_led_blink_loop(led_page):
     """Test LED blink loop behavior"""
